@@ -1,3 +1,5 @@
+--v2
+
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -414,7 +416,7 @@ end
 ----------------------------------------------------
 -- CUSTOM BUTTON
 ----------------------------------------------------
-local function createCustomButton(pageName, title, description, callback)
+local function createCustomButton(pageName, title, description, callback, order)
     local targetPage = pages[pageName]
     if not targetPage then return end
 
@@ -425,7 +427,8 @@ local function createCustomButton(pageName, title, description, callback)
     actionBtn.BackgroundTransparency = 0.4
     actionBtn.Text = ""
     actionBtn.AutoButtonColor = true
-
+    actionBtn.LayoutOrder = order or 0  -- ✅ ITO YUNG DINAGDAG PARA UMORDER NANG TAMA
+    
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 6)
     btnCorner.Parent = actionBtn
@@ -476,6 +479,29 @@ local function createCustomButton(pageName, title, description, callback)
     end)
 
     actionBtn.Parent = targetPage
+end
+
+
+----------------------------------------------------
+-- SECTION HEADER (like SAVE SLOTS)
+----------------------------------------------------
+local function createSectionHeader(pageName, text, order)
+    local targetPage = pages[pageName]
+    if not targetPage then return end
+
+    local header = Instance.new("TextLabel")
+    header.Name = text:gsub("%s", "") .. "Header"
+    header:SetAttribute("SectionHeader", true)
+    header.Size = UDim2.new(0.92, 0, 0, 20)
+    header.BackgroundTransparency = 1
+    header.Text = text
+    header.TextColor3 = Color3.fromRGB(200, 200, 200)
+    header.Font = Enum.Font.GothamBold
+    header.TextSize = 12
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.LayoutOrder = order or 0
+    header.Parent = targetPage
+    return header
 end
 
 ----------------------------------------------------
@@ -877,6 +903,101 @@ task.spawn(function()
         end
     end)
 end)
+
+
+
+----------------------------------------------------
+-- REDEEM BOX (Input + Button)
+----------------------------------------------------
+local function createRedeemBox(pageName, onRedeem)
+    local targetPage = pages[pageName]
+    if not targetPage then return end
+
+    -- Add page padding once so it doesn't stick to the top/bottom edges
+    if not targetPage:FindFirstChild("RedeemPagePadding") then
+        local pagePad = Instance.new("UIPadding")
+        pagePad.Name = "RedeemPagePadding"
+        pagePad.PaddingTop = UDim.new(0, 12)
+        pagePad.PaddingBottom = UDim.new(0, 12)
+        pagePad.Parent = targetPage
+    end
+
+    local container = Instance.new("Frame")
+    container.Name = "RedeemBox"
+    container.Size = UDim2.new(0.92, 0, 0, 42)
+    container.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    container.BackgroundTransparency = 0.4
+    container.BorderSizePixel = 0
+    container.LayoutOrder = -2
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = container
+
+    -- ❌ removed the red UIStroke block entirely
+
+    -- TextBox (left)
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(1, -100, 1, -10)
+    textBox.Position = UDim2.new(0, 5, 0, 5)
+    textBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    textBox.BorderSizePixel = 0
+    textBox.Text = ""
+    textBox.PlaceholderText = "Enter Code"
+    textBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 130)
+    textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textBox.Font = Enum.Font.Gotham
+    textBox.TextSize = 13
+    textBox.TextXAlignment = Enum.TextXAlignment.Left
+    textBox.ClearTextOnFocus = false
+    textBox.Parent = container
+
+    local tbCorner = Instance.new("UICorner")
+    tbCorner.CornerRadius = UDim.new(0, 4)
+    tbCorner.Parent = textBox
+
+    local tbPad = Instance.new("UIPadding")
+    tbPad.PaddingLeft = UDim.new(0, 10)
+    tbPad.PaddingRight = UDim.new(0, 6)
+    tbPad.Parent = textBox
+
+    -- REDEEM Button (right)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 85, 1, -10)
+    btn.Position = UDim2.new(1, -90, 0, 5)
+    btn.BackgroundColor3 = Color3.fromRGB(150, 30, 50)
+    btn.BorderSizePixel = 0
+    btn.Text = "REDEEM"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.AutoButtonColor = true
+    btn.Parent = container
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = btn
+
+    local function doRedeem()
+        local code = textBox.Text
+        if code and code:gsub("%s", "") ~= "" then
+            if onRedeem then onRedeem(code) end
+            textBox.Text = ""
+        else
+            notify("IOHUB", "Please enter a code", 2)
+        end
+    end
+
+    btn.MouseButton1Click:Connect(doRedeem)
+
+    textBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then doRedeem() end
+    end)
+
+    container.Parent = targetPage
+    return container
+end
+
 
 ----------------------------------------------------
 -- TAB CREATION
@@ -1329,6 +1450,30 @@ for i, data in ipairs(chapterData) do
     createChapterCard(chaptersPage, data.Name, data.ID, i)
 end
 
+-- Header (Nasa pinaka-taas)
+createSectionHeader("Info", "REDEEM CODE", -3)
+
+-- Redeem Box (Nasa gitna)
+-- Siguraduhin na ang container.LayoutOrder = -2 sa loob ng createRedeemBox function
+createRedeemBox("Info", function(code)
+    local rs = game:GetService("ReplicatedStorage")
+    local codeEvent = rs:FindFirstChild("Codes@Mimic")
+    if codeEvent and codeEvent:IsA("RemoteEvent") then
+        local ok = pcall(function() codeEvent:FireServer(code) end)
+        if ok then
+            notify("IOHUB", "Redeeming: " .. code, 2)
+        else
+            notify("IOHUB", "Failed to fire redeem event", 2)
+        end
+    else
+        notify("IOHUB", "Codes@Mimic remote not found!", 2)
+    end
+end)
+
+-- Header SUPPORT
+createSectionHeader("Info", "SUPPORT", 1)
+
+-- Discord Button
 createCustomButton("Info", "Discord", "Join to Our Discord Server", function()
     local link = "https://discord.gg/p46UenVJNj"
     if setclipboard then setclipboard(link) elseif toclipboard then toclipboard(link) end
@@ -1337,10 +1482,13 @@ createCustomButton("Info", "Discord", "Join to Our Discord Server", function()
         Text = "🔗 Discord Invite link copied to clipboard!",
         Duration = 2
     })
-end)
+end, 2) -- ✅ ITO YUNG PINAKA-IMPORTANTE, YUNG "2" SA DULO
+
+
+
 
 ----------------------------------------------------
--- GLOBAL CHAT TAB (v7 - Compact + No Join Spam)
+-- GLOBAL CHAT TAB (Perfect Fit, Auto-Image, Compact)
 ----------------------------------------------------
 do
     local chatPage = pages["Global Chat"]
@@ -1350,6 +1498,9 @@ do
     chatPage.ScrollingEnabled = false
     chatPage.CanvasSize = UDim2.new(0, 0, 0, 0)
     chatPage.ScrollBarThickness = 0
+    
+  chatPage.Position = UDim2.new(0, 0, 0, 0)
+chatPage.Size = UDim2.new(1, 0, 1, 0)
 
     local P = game:GetService("Players")
     local H = game:GetService("HttpService")
@@ -1382,12 +1533,9 @@ do
         Msgs={}, Seen={}, LastCount=0, LastSend=0, Order=0,
         Alive=false, Mode="global", PrivTarget=nil, Online={}, DMList={}, ReplyTo=nil,
         OnlineCount = 1,
-        PopupReady = false,   -- NEW: para hindi mag-spam sa join
+        PopupReady = false,
     }
 
-    -------------------------------------------------
-    -- ROBLOX ASSET NORMALIZER
-    -------------------------------------------------
     local function normalizeRobloxAsset(input)
         if not input or type(input) ~= "string" then return nil end
         local s = input:gsub("%s", "")
@@ -1406,9 +1554,6 @@ do
         return nil
     end
 
-    -------------------------------------------------
-    -- CLIPBOARD
-    -------------------------------------------------
     local function getClipboardText()
         if type(getclipboard) == "function" then
             local ok, r = pcall(getclipboard)
@@ -1425,9 +1570,6 @@ do
         return ""
     end
 
-    -------------------------------------------------
-    -- MENTION POPUP
-    -------------------------------------------------
     local popupQueue = {}
     local popupActive = false
 
@@ -1513,9 +1655,6 @@ do
         end)
     end
 
-    -------------------------------------------------
-    -- FACEBOOK-STYLE PROFILE (COMPACT 290x270)
-    -------------------------------------------------
     local function showProfilePopup(data)
         local backdrop = Instance.new("TextButton")
         backdrop.Size = UDim2.new(1, 0, 1, 0)
@@ -1527,7 +1666,7 @@ do
         backdrop.Parent = screenGui
 
         local dialog = Instance.new("Frame")
-        dialog.Size = UDim2.new(0, 290, 0, 270)                        -- ← COMPACT
+        dialog.Size = UDim2.new(0, 290, 0, 270)
         dialog.Position = UDim2.new(0.5, -145, 0.5, -135)
         dialog.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
         dialog.BorderSizePixel = 0
@@ -1542,7 +1681,7 @@ do
         dStroke.Parent = dialog
 
         local banner = Instance.new("Frame")
-        banner.Size = UDim2.new(1, 0, 0, 52)                            -- ← shorter
+        banner.Size = UDim2.new(1, 0, 0, 52)
         banner.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
         banner.BorderSizePixel = 0
         banner.ZIndex = 502
@@ -1570,8 +1709,8 @@ do
         Instance.new("UICorner", closeX).CornerRadius = UDim.new(1, 0)
 
         local avatar = Instance.new("ImageLabel")
-        avatar.Size = UDim2.fromOffset(58, 58)                          -- ← 58x58 (was 90)
-        avatar.Position = UDim2.new(0.5, -29, 0, 22)                    -- ← center, overlaps banner
+        avatar.Size = UDim2.fromOffset(58, 58)
+        avatar.Position = UDim2.new(0.5, -29, 0, 22)
         avatar.BackgroundColor3 = Color3.fromRGB(47, 49, 54)
         avatar.BorderSizePixel = 0
         avatar.Image = ""
@@ -1592,12 +1731,12 @@ do
 
         local nameLbl = Instance.new("TextLabel")
         nameLbl.Size = UDim2.new(1, -28, 0, 20)
-        nameLbl.Position = UDim2.new(0, 14, 0, 84)                      -- ← was 142
+        nameLbl.Position = UDim2.new(0, 14, 0, 84)
         nameLbl.BackgroundTransparency = 1
         nameLbl.Text = "@" .. tostring(data.name or "?")
         nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
         nameLbl.Font = Enum.Font.GothamBold
-        nameLbl.TextSize = 15                                           -- ← was 18
+        nameLbl.TextSize = 15
         nameLbl.TextXAlignment = Enum.TextXAlignment.Center
         nameLbl.ZIndex = 504
         nameLbl.Parent = dialog
@@ -1610,12 +1749,12 @@ do
 
         local gameLbl = Instance.new("TextLabel")
         gameLbl.Size = UDim2.new(1, -28, 0, 14)
-        gameLbl.Position = UDim2.new(0, 14, 0, 106)                     -- ← was 170
+        gameLbl.Position = UDim2.new(0, 14, 0, 106)
         gameLbl.BackgroundTransparency = 1
         gameLbl.Text = "🎮 " .. tostring(data.gameName or "Unknown Game")
         gameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
         gameLbl.Font = Enum.Font.GothamMedium
-        gameLbl.TextSize = 11                                           -- ← was 12
+        gameLbl.TextSize = 11
         gameLbl.TextXAlignment = Enum.TextXAlignment.Center
         gameLbl.TextTruncate = Enum.TextTruncate.AtEnd
         gameLbl.ZIndex = 504
@@ -1627,10 +1766,9 @@ do
         }
         gGrad.Parent = gameLbl
 
-        -- Info card (compact)
         local infoCard = Instance.new("Frame")
-        infoCard.Size = UDim2.new(1, -28, 0, 68)                        -- ← 68 (was 96)
-        infoCard.Position = UDim2.new(0, 14, 0, 126)                    -- ← was 200
+        infoCard.Size = UDim2.new(1, -28, 0, 68)
+        infoCard.Position = UDim2.new(0, 14, 0, 126)
         infoCard.BackgroundColor3 = Color3.fromRGB(35, 36, 44)
         infoCard.BorderSizePixel = 0
         infoCard.ZIndex = 502
@@ -1642,35 +1780,35 @@ do
         icStroke.Transparency = 0.5
         icStroke.Parent = infoCard
         local icPad = Instance.new("UIPadding")
-        icPad.PaddingTop = UDim.new(0, 6)                               -- ← was 10
+        icPad.PaddingTop = UDim.new(0, 6)
         icPad.PaddingLeft = UDim.new(0, 10)
         icPad.PaddingRight = UDim.new(0, 10)
         icPad.Parent = infoCard
         local icLayout = Instance.new("UIListLayout")
-        icLayout.Padding = UDim.new(0, 2)                               -- ← was 4
+        icLayout.Padding = UDim.new(0, 2)
         icLayout.SortOrder = Enum.SortOrder.LayoutOrder
         icLayout.Parent = infoCard
 
         local function infoRow(labelText, valueText, order)
             local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, 0, 0, 10)                           -- ← was 12
+            lbl.Size = UDim2.new(1, 0, 0, 10)
             lbl.BackgroundTransparency = 1
             lbl.Text = labelText
             lbl.TextColor3 = Color3.fromRGB(140, 145, 155)
             lbl.Font = Enum.Font.GothamBold
-            lbl.TextSize = 9                                            -- ← was 10
+            lbl.TextSize = 9
             lbl.TextXAlignment = Enum.TextXAlignment.Left
             lbl.LayoutOrder = order
             lbl.ZIndex = 503
             lbl.Parent = infoCard
 
             local val = Instance.new("TextLabel")
-            val.Size = UDim2.new(1, 0, 0, 12)                           -- ← was 16
+            val.Size = UDim2.new(1, 0, 0, 12)
             val.BackgroundTransparency = 1
             val.Text = tostring(valueText or "N/A")
             val.TextColor3 = Color3.fromRGB(230, 232, 235)
             val.Font = Enum.Font.Gotham
-            val.TextSize = 10                                           -- ← was 12
+            val.TextSize = 10
             val.TextXAlignment = Enum.TextXAlignment.Left
             val.TextTruncate = Enum.TextTruncate.AtEnd
             val.LayoutOrder = order + 1
@@ -1681,10 +1819,9 @@ do
         infoRow("GAME NAME", tostring(data.gameName or "Unknown Game"), 1)
         infoRow("JOB ID", data.jobId and tostring(data.jobId) or "Not Available", 3)
 
-        -- Buttons row (compact)
         local btnRow = Instance.new("Frame")
-        btnRow.Size = UDim2.new(1, -28, 0, 30)                          -- ← 30 (was 36)
-        btnRow.Position = UDim2.new(0, 14, 0, 202)                      -- ← was 312
+        btnRow.Size = UDim2.new(1, -28, 0, 30)
+        btnRow.Position = UDim2.new(0, 14, 0, 202)
         btnRow.BackgroundTransparency = 1
         btnRow.ZIndex = 504
         btnRow.Parent = dialog
@@ -1705,7 +1842,7 @@ do
         joinBtn.Text = "Join Game"
         joinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         joinBtn.Font = Enum.Font.GothamBold
-        joinBtn.TextSize = 12                                           -- ← was 13
+        joinBtn.TextSize = 12
         joinBtn.LayoutOrder = 1
         joinBtn.AutoButtonColor = true
         joinBtn.ZIndex = 505
@@ -1746,9 +1883,6 @@ do
         end)
     end
 
-    -------------------------------------------------
-    -- IMAGE FULL VIEW
-    -------------------------------------------------
     local function showImageDialog(imageUrl)
         local backdrop = Instance.new("TextButton")
         backdrop.Size = UDim2.new(1, 0, 1, 0)
@@ -1825,251 +1959,6 @@ do
         end)
     end
 
-    -------------------------------------------------
-    -- IMAGE URL DIALOG (COMPACT 300x300)
-    -------------------------------------------------
-    local function showImageUrlDialog()
-        local backdrop = Instance.new("TextButton")
-        backdrop.Size = UDim2.new(1, 0, 1, 0)
-        backdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        backdrop.BackgroundTransparency = 0.5
-        backdrop.Text = ""
-        backdrop.AutoButtonColor = false
-        backdrop.ZIndex = 500
-        backdrop.Parent = screenGui
-
-        local dialog = Instance.new("Frame")
-        dialog.Size = UDim2.new(0, 300, 0, 300)                        -- ← COMPACT
-        dialog.Position = UDim2.new(0.5, -150, 0.5, -150)
-        dialog.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-        dialog.BorderSizePixel = 0
-        dialog.ZIndex = 501
-        dialog.Parent = screenGui
-        Instance.new("UICorner", dialog).CornerRadius = UDim.new(0, 12)
-        local dStroke = Instance.new("UIStroke")
-        dStroke.Color = Color3.fromRGB(88, 101, 242)
-        dStroke.Thickness = 1.5
-        dStroke.Transparency = 0.3
-        dStroke.Parent = dialog
-
-        local title = Instance.new("TextLabel")
-        title.Size = UDim2.new(1, -56, 0, 22)
-        title.Position = UDim2.new(0, 14, 0, 10)
-        title.BackgroundTransparency = 1
-        title.Text = "Send Roblox Image"
-        title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        title.Font = Enum.Font.GothamBold
-        title.TextSize = 15
-        title.TextXAlignment = Enum.TextXAlignment.Left
-        title.ZIndex = 502
-        title.Parent = dialog
-
-        local closeX = Instance.new("TextButton")
-        closeX.Size = UDim2.fromOffset(22, 22)
-        closeX.Position = UDim2.new(1, -32, 0, 10)
-        closeX.BackgroundColor3 = Color3.fromRGB(60, 62, 70)
-        closeX.Text = "X"
-        closeX.TextColor3 = Color3.fromRGB(230, 230, 230)
-        closeX.Font = Enum.Font.GothamBold
-        closeX.TextSize = 11
-        closeX.AutoButtonColor = true
-        closeX.ZIndex = 502
-        closeX.Parent = dialog
-        Instance.new("UICorner", closeX).CornerRadius = UDim.new(0, 5)
-
-        local hint = Instance.new("TextLabel")
-        hint.Size = UDim2.new(1, -28, 0, 20)
-        hint.Position = UDim2.new(0, 14, 0, 34)
-        hint.BackgroundTransparency = 1
-        hint.Text = "Roblox asset ID or URL lang"
-        hint.TextColor3 = Color3.fromRGB(160, 165, 175)
-        hint.Font = Enum.Font.Gotham
-        hint.TextSize = 10
-        hint.TextWrapped = true
-        hint.TextXAlignment = Enum.TextXAlignment.Left
-        hint.TextYAlignment = Enum.TextYAlignment.Top
-        hint.ZIndex = 502
-        hint.Parent = dialog
-
-        local urlBox = Instance.new("TextBox")
-        urlBox.Size = UDim2.new(1, -28, 0, 28)
-        urlBox.Position = UDim2.new(0, 14, 0, 58)
-        urlBox.BackgroundColor3 = Color3.fromRGB(45, 47, 54)
-        urlBox.BorderSizePixel = 0
-        urlBox.Text = ""
-        urlBox.PlaceholderText = "rbxassetid://1234567890"
-        urlBox.PlaceholderColor3 = Color3.fromRGB(110, 115, 125)
-        urlBox.TextColor3 = Color3.fromRGB(230, 232, 235)
-        urlBox.Font = Enum.Font.Gotham
-        urlBox.TextSize = 11
-        urlBox.TextXAlignment = Enum.TextXAlignment.Left
-        urlBox.ClearTextOnFocus = false
-        urlBox.ZIndex = 502
-        urlBox.Parent = dialog
-        Instance.new("UICorner", urlBox).CornerRadius = UDim.new(0, 6)
-        local uPad = Instance.new("UIPadding")
-        uPad.PaddingLeft = UDim.new(0, 10)
-        uPad.PaddingRight = UDim.new(0, 10)
-        uPad.Parent = urlBox
-
-        local previewBox = Instance.new("Frame")
-        previewBox.Size = UDim2.new(1, -28, 0, 90)                     -- ← 90 (was 130)
-        previewBox.Position = UDim2.new(0, 14, 0, 92)
-        previewBox.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-        previewBox.BorderSizePixel = 0
-        previewBox.ZIndex = 502
-        previewBox.Parent = dialog
-        Instance.new("UICorner", previewBox).CornerRadius = UDim.new(0, 6)
-        local pbStroke = Instance.new("UIStroke")
-        pbStroke.Color = Color3.fromRGB(50, 52, 60)
-        pbStroke.Thickness = 1
-        pbStroke.Parent = previewBox
-
-        local previewImg = Instance.new("ImageLabel")
-        previewImg.Size = UDim2.new(1, -8, 1, -8)
-        previewImg.Position = UDim2.new(0, 4, 0, 4)
-        previewImg.BackgroundTransparency = 1
-        previewImg.Image = ""
-        previewImg.ScaleType = Enum.ScaleType.Fit
-        previewImg.ZIndex = 503
-        previewImg.Parent = previewBox
-
-        local previewHint = Instance.new("TextLabel")
-        previewHint.Size = UDim2.new(1, 0, 1, 0)
-        previewHint.BackgroundTransparency = 1
-        previewHint.Text = "Preview dito"
-        previewHint.TextColor3 = Color3.fromRGB(100, 105, 115)
-        previewHint.Font = Enum.Font.Gotham
-        previewHint.TextSize = 10
-        previewHint.ZIndex = 503
-        previewHint.Parent = previewBox
-
-        local pasteBtn = Instance.new("TextButton")
-        pasteBtn.Size = UDim2.new(1, -28, 0, 22)
-        pasteBtn.Position = UDim2.new(0, 14, 0, 188)
-        pasteBtn.BackgroundColor3 = Color3.fromRGB(50, 52, 60)
-        pasteBtn.Text = "📋  Paste from clipboard"
-        pasteBtn.TextColor3 = Color3.fromRGB(200, 205, 215)
-        pasteBtn.Font = Enum.Font.GothamMedium
-        pasteBtn.TextSize = 10
-        pasteBtn.AutoButtonColor = true
-        pasteBtn.ZIndex = 502
-        pasteBtn.Parent = dialog
-        Instance.new("UICorner", pasteBtn).CornerRadius = UDim.new(0, 5)
-
-        local function updatePreview()
-            local normalized = normalizeRobloxAsset(urlBox.Text)
-            if normalized then
-                previewImg.Image = normalized
-                previewHint.Visible = false
-                pbStroke.Color = Color3.fromRGB(88, 101, 242)
-                pbStroke.Transparency = 0.3
-            else
-                previewImg.Image = ""
-                previewHint.Visible = true
-                if urlBox.Text == "" then
-                    previewHint.Text = "Preview dito"
-                    previewHint.TextColor3 = Color3.fromRGB(100, 105, 115)
-                    pbStroke.Color = Color3.fromRGB(50, 52, 60)
-                    pbStroke.Transparency = 0
-                else
-                    previewHint.Text = "❌ Invalid Roblox asset ID"
-                    previewHint.TextColor3 = Color3.fromRGB(237, 100, 100)
-                    pbStroke.Color = Color3.fromRGB(237, 100, 100)
-                    pbStroke.Transparency = 0.3
-                end
-            end
-        end
-
-        urlBox:GetPropertyChangedSignal("Text"):Connect(updatePreview)
-
-        task.spawn(function()
-            local clip = getClipboardText()
-            if clip ~= "" then
-                local normalized = normalizeRobloxAsset(clip)
-                if normalized then
-                    local id = normalized:match("rbxassetid://(%d+)")
-                    urlBox.Text = id or clip
-                end
-            end
-        end)
-
-        pasteBtn.MouseButton1Click:Connect(function()
-            local clip = getClipboardText()
-            if clip == "" then return end
-            local normalized = normalizeRobloxAsset(clip)
-            if normalized then
-                local id = normalized:match("rbxassetid://(%d+)")
-                urlBox.Text = id or clip
-            else
-                urlBox.Text = clip
-            end
-        end)
-
-        local function destroy()
-            if backdrop and backdrop.Parent then backdrop:Destroy() end
-            if dialog and dialog.Parent then dialog:Destroy() end
-        end
-        closeX.MouseButton1Click:Connect(destroy)
-        backdrop.MouseButton1Click:Connect(destroy)
-
-        local btnRow = Instance.new("Frame")
-        btnRow.Size = UDim2.new(1, -28, 0, 28)                          -- ← 28 (was 34)
-        btnRow.Position = UDim2.new(0, 14, 1, -40)                      -- ← bottom 40
-        btnRow.BackgroundTransparency = 1
-        btnRow.ZIndex = 502
-        btnRow.Parent = dialog
-        local bLayout = Instance.new("UIListLayout")
-        bLayout.FillDirection = Enum.FillDirection.Horizontal
-        bLayout.Padding = UDim.new(0, 6)
-        bLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-        bLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        bLayout.Parent = btnRow
-
-        local sendBtn = Instance.new("TextButton")
-        sendBtn.Size = UDim2.new(0, 90, 1, 0)
-        sendBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-        sendBtn.Text = "Send"
-        sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        sendBtn.Font = Enum.Font.GothamBold
-        sendBtn.TextSize = 11
-        sendBtn.LayoutOrder = 1
-        sendBtn.AutoButtonColor = true
-        sendBtn.ZIndex = 503
-        sendBtn.Parent = btnRow
-        Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0, 5)
-
-        local cancelBtn = Instance.new("TextButton")
-        cancelBtn.Size = UDim2.new(0, 90, 1, 0)
-        cancelBtn.BackgroundColor3 = Color3.fromRGB(60, 63, 70)
-        cancelBtn.Text = "Cancel"
-        cancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        cancelBtn.Font = Enum.Font.GothamBold
-        cancelBtn.TextSize = 11
-        cancelBtn.LayoutOrder = 2
-        cancelBtn.AutoButtonColor = true
-        cancelBtn.ZIndex = 503
-        cancelBtn.Parent = btnRow
-        Instance.new("UICorner", cancelBtn).CornerRadius = UDim.new(0, 5)
-        cancelBtn.MouseButton1Click:Connect(destroy)
-
-        local function trySend()
-            if not normalizeRobloxAsset(urlBox.Text) then
-                notify("Invalid Input", "Roblox asset ID lang ang tinatanggap.")
-                return
-            end
-            if S:SendImage(urlBox.Text) then destroy() end
-        end
-
-        sendBtn.MouseButton1Click:Connect(trySend)
-        urlBox.FocusLost:Connect(function(enterPressed)
-            if enterPressed then trySend() end
-        end)
-    end
-
-    -------------------------------------------------
-    -- ONLINE PLAYERS LIST
-    -------------------------------------------------
     local function showOnlinePlayersDialog(others)
         local backdrop = Instance.new("TextButton")
         backdrop.Size = UDim2.new(1, 0, 1, 0)
@@ -2233,9 +2122,6 @@ do
         end
     end
 
-    -------------------------------------------------
-    -- HTTP + UTILS
-    -------------------------------------------------
     local function Req()
         if type(request)=="function" then return request end
         if type(http_request)=="function" then return http_request end
@@ -2428,9 +2314,6 @@ do
         return true
     end
 
-    -------------------------------------------------
-    -- NEW MESSAGE
-    -------------------------------------------------
     function S:NewMessage(d)
         if not self.Alive or not self.List then return end
         if type(d)~="table" then return end
@@ -2468,28 +2351,26 @@ do
         self.Order=self.Order+1
         local mine=(uid==L.UserId) or (un:lower()==L.Name:lower())
 
--- ═══ POPUPS: only after initial history load ═══
-if self.PopupReady then
-    local isEveryoneMsg = raw:lower():find("@everyone", 1, true) ~= nil
-    local replyTargetUid = tonumber(d.replyToUserId or 0) or 0
-    local replyToMe = (replyTargetUid > 0 and replyTargetUid == L.UserId)
+        if self.PopupReady then
+            local isEveryoneMsg = raw:lower():find("@everyone", 1, true) ~= nil
+            local replyTargetUid = tonumber(d.replyToUserId or 0) or 0
+            local replyToMe = (replyTargetUid > 0 and replyTargetUid == L.UserId)
 
-    if isEveryoneMsg and not mine then
-        ShowMentionPopup("@everyone mentioned you", "@"..un..": "..raw:sub(1, 60), Color3.fromRGB(255, 180, 50))
-    end
-    if replyToMe then
-        -- ✅ GAMITIN ANG `raw` (bagong reply), HINDI `d.replyText` (quoted)
-        local preview
-        if msgImageUrl ~= "" then
-            preview = "📷 Sent you an image"
-        elseif raw ~= "" then
-            preview = '"'..raw:sub(1, 60)..'"'
-        else
-            preview = "Replied to your message"
+            if isEveryoneMsg and not mine then
+                ShowMentionPopup("@everyone mentioned you", "@"..un..": "..raw:sub(1, 60), Color3.fromRGB(255, 180, 50))
+            end
+            if replyToMe then
+                local preview
+                if msgImageUrl ~= "" then
+                    preview = "📷 Sent you an image"
+                elseif raw ~= "" then
+                    preview = '"'..raw:sub(1, 60)..'"'
+                else
+                    preview = "Replied to your message"
+                end
+                ShowMentionPopup("@"..un.." replied to your message!", preview, Color3.fromRGB(88, 101, 242))
+            end
         end
-        ShowMentionPopup("@"..un.." replied to your message!", preview, Color3.fromRGB(88, 101, 242))
-    end
-end
 
         local wrap=self:_o({"Frame",{
             Size=UDim2.new(1,-2,0,0),AutomaticSize=Enum.AutomaticSize.Y,
@@ -2507,10 +2388,13 @@ end
         stroke.Thickness=1
         stroke.Transparency=mine and 0.55 or 0.4
         stroke.Parent=row
+        
+        -- ✅ PINALIT: Pinaliit ang padding sa 4 (dating 6)
         self:_o({"UIPadding",{
-            PaddingTop=UDim.new(0,6),PaddingBottom=UDim.new(0,6),
+            PaddingTop=UDim.new(0,4),PaddingBottom=UDim.new(0,4),
             PaddingLeft=UDim.new(0,6),PaddingRight=UDim.new(0,6)
         }},row)
+        
         self:_o({"UIListLayout",{
             FillDirection=Enum.FillDirection.Vertical,Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder
         }},row)
@@ -2539,8 +2423,9 @@ end
         local mainContainer = self:_o({"Frame",{Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=lo}},row)
         self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,8),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Top}},mainContainer)
 
+        -- ✅ PINALIT: Avatar size 28x28 (dating 36x36)
         local av = self:_o({"ImageButton",{
-            Size=UDim2.fromOffset(36,36),BackgroundColor3=Color3.fromRGB(47,49,54),BorderSizePixel=0,Image="",LayoutOrder=1,
+            Size=UDim2.fromOffset(28,28),BackgroundColor3=Color3.fromRGB(47,49,54),BorderSizePixel=0,Image="",LayoutOrder=1,
             AutoButtonColor=false
         }},mainContainer)
         self:_o({"UICorner",{CornerRadius=UDim.new(1,0)}},av)
@@ -2561,27 +2446,30 @@ end
 
         av.MouseButton1Click:Connect(OpenProfilePopup)
 
-        local contentColumn = self:_o({"Frame",{Size=UDim2.new(1,-44,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=2}},mainContainer)
-        self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Vertical,Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder}},contentColumn)
+        -- ✅ PINALIT: Content width -36 (dating -44)
+        local contentColumn = self:_o({"Frame",{Size=UDim2.new(1,-36,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=2}},mainContainer)
+        self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Vertical,Padding=UDim.new(0,2),SortOrder=Enum.SortOrder.LayoutOrder}},contentColumn)
 
-        local headerRow = self:_o({"Frame",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,LayoutOrder=1}},contentColumn)
+        local headerRow = self:_o({"Frame",{Size=UDim2.new(1,0,0,20),BackgroundTransparency=1,LayoutOrder=1}},contentColumn)
         local leftHeader = self:_o({"Frame",{Size=UDim2.new(1,-50,1,0),BackgroundTransparency=1}},headerRow)
         self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center}},leftHeader)
 
-        local userLabel = self:_o({"TextButton",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="@"..un,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=13,AutoButtonColor=false,LayoutOrder=1}},leftHeader)
+        -- ✅ PINALIT: TextSize 12 (dating 13)
+        local userLabel = self:_o({"TextButton",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="@"..un,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=12,AutoButtonColor=false,LayoutOrder=1}},leftHeader)
         local uGrad = Instance.new("UIGradient")
         uGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 120, 150)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 200, 100))}
         uGrad.Parent = userLabel
         userLabel.MouseButton1Click:Connect(OpenProfilePopup)
 
-        self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="|",TextColor3=Color3.fromRGB(150,150,150),Font=Enum.Font.Gotham,TextSize=13,LayoutOrder=2}},leftHeader)
+        self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="|",TextColor3=Color3.fromRGB(150,150,150),Font=Enum.Font.Gotham,TextSize=12,LayoutOrder=2}},leftHeader)
 
-        local gameLabel = self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=gName,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=13,LayoutOrder=3,TextTruncate=Enum.TextTruncate.AtEnd}},leftHeader)
+        -- ✅ PINALIT: TextSize 12 (dating 13)
+        local gameLabel = self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=gName,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=12,LayoutOrder=3,TextTruncate=Enum.TextTruncate.AtEnd}},leftHeader)
         local gGrad = Instance.new("UIGradient")
         gGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 255, 150)), ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 200, 255))}
         gGrad.Parent = gameLabel
 
-        local rightHeader = self:_o({"Frame",{AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,0,0,0),Size=UDim2.fromOffset(50,22),BackgroundTransparency=1}},headerRow)
+        local rightHeader = self:_o({"Frame",{AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,0,0,0),Size=UDim2.fromOffset(50,20),BackgroundTransparency=1}},headerRow)
         self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,4),HorizontalAlignment=Enum.HorizontalAlignment.Right,VerticalAlignment=Enum.VerticalAlignment.Center}},rightHeader)
 
         local replyBtn = self:_o({"ImageButton",{Size=UDim2.fromOffset(14,14),BackgroundTransparency=1,Image=I.reply,ImageColor3=Color3.fromRGB(130,135,145),AutoButtonColor=false,LayoutOrder=1}},rightHeader)
@@ -2593,9 +2481,10 @@ end
 
         self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=RelTime(ts),TextColor3=Color3.fromRGB(120,125,135),Font=Enum.Font.Gotham,TextSize=10,LayoutOrder=2}},rightHeader)
 
+        -- ✅ PINALIT: TextSize 12 (dating 14)
         local txt=self:_o({"TextLabel",{
             Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,
-            Text=raw,TextColor3=Color3.fromRGB(235,235,235),Font=Enum.Font.GothamBold,TextSize=14,
+            Text=raw,TextColor3=Color3.fromRGB(235,235,235),Font=Enum.Font.GothamBold,TextSize=12,
             TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Top,LayoutOrder=2
         }},contentColumn)
         local chatStroke = Instance.new("UIStroke")
@@ -2606,7 +2495,7 @@ end
 
         if msgImageUrl ~= "" then
             local imgBtn = Instance.new("ImageButton")
-            imgBtn.Size = UDim2.new(1, 0, 0, 170)
+            imgBtn.Size = UDim2.new(1, 0, 0, 140) -- ✅ PINALIT: Height 140 (dating 170)
             imgBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
             imgBtn.BorderSizePixel = 0
             imgBtn.Image = msgImageUrl
@@ -2701,10 +2590,19 @@ end
         if os.clock()-self.LastSend<C.Cool then return false end
         text=tostring(text==nil and (self.Input and self.Input.Text or "") or text or "")
         text=text:gsub("\r",""):gsub("\0",""):gsub("^%s+",""):gsub("%s+$","")
+        
         if text=="" then
             self:_notice("Type something",Color3.fromRGB(237,66,69))
             return false
         end
+
+        -- ✅ BAGO: Auto-detect kung Image ID/URL ang tinype sa textbox
+        local normalizedImage = normalizeRobloxAsset(text)
+        if normalizedImage then
+            if self.Input then self.Input.Text = "" end
+            return self:SendImage(normalizedImage)
+        end
+
         if #text>C.Max then
             text=text:sub(1,C.Max)
             self:_notice("Trimmed to "..C.Max,Color3.fromRGB(250,200,80))
@@ -2818,21 +2716,23 @@ end
         if self.Alive and self.Main then return self end
         self:Destroy()
         self.Alive=true
-        self.PopupReady = false    -- ═══ reset bawat init ═══
+        self.PopupReady = false
 
         local container = pages["Global Chat"]
         local old = container:FindFirstChild("GlobalChatEmbedded")
         if old then old:Destroy() end
 
         local main=self:_o({"Frame",{
-            Name="GlobalChatEmbedded",
-            Size=UDim2.new(1, 0, 1, 0),
-            Position=UDim2.new(0, 0, 0, 0),
-            BackgroundColor3=Color3.fromRGB(30,31,34),BorderSizePixel=0,ClipsDescendants=true
-        }},container)
-        self.Main=main
-        self:_o({"UICorner",{CornerRadius=UDim.new(0,8)}},main)
-        AddBorder(main,Color3.fromRGB(0,0,0),Color3.fromRGB(60,65,75),1,1.5)
+    Name="GlobalChatEmbedded",
+    Size=UDim2.new(1, 0, 1, 0),
+    Position=UDim2.new(0, 0, 0, 0),
+    BackgroundColor3=Color3.fromRGB(30,31,34),BorderSizePixel=0,ClipsDescendants=true
+}},container)
+self.Main=main
+-- Pinalitan natin ng 12 para kapareho ng CornerRadius ng contentFrame
+self:_o({"UICorner",{CornerRadius=UDim.new(0,12)}},main)
+
+-- ❌ TINANGGAL NATIN YUNG AddBorder(main, ...) para hindi na lumabas yung makapal na border sa gilid
 
         local top=self:_o({"Frame",{
             Position=UDim2.new(0,0,0,0),Size=UDim2.new(1,0,0,40),
@@ -2898,10 +2798,11 @@ end
         }},main)
         self:_o({"Frame",{Size=UDim2.new(1,0,0,6),BackgroundColor3=Color3.fromRGB(40,42,48),BorderSizePixel=0}},bottom)
 
+        -- ✅ PINALIT: Input box pinalaki, at tinanggal ang imageBtn
         local input=self:_o({"TextBox",{
-            Position=UDim2.fromOffset(6,8),Size=UDim2.new(1,-118,0,30),
+            Position=UDim2.fromOffset(6,8),Size=UDim2.new(1,-72,0,30),
             BackgroundColor3=Color3.fromRGB(50,53,60),
-            BorderSizePixel=0,ClearTextOnFocus=false,MultiLine=false,Text="",PlaceholderText="Message...",
+            BorderSizePixel=0,ClearTextOnFocus=false,MultiLine=false,Text="",PlaceholderText="Message or Image ID...",
             PlaceholderColor3=Color3.fromRGB(120,125,135),TextColor3=Color3.fromRGB(230,232,235),
             Font=Enum.Font.Gotham,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Center
         }},bottom)
@@ -2909,26 +2810,6 @@ end
         self:_o({"UICorner",{CornerRadius=UDim.new(0,6)}},input)
         self:_o({"UIPadding",{PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,6)}},input)
         AddBorder(input,Color3.fromRGB(0,0,0),Color3.fromRGB(60,65,75),1,1.2)
-
-        local imageBtn = Instance.new("TextButton")
-        imageBtn.Name = "ImageButton"
-        imageBtn.Size = UDim2.new(0, 30, 0, 30)
-        imageBtn.Position = UDim2.new(1, -74, 0, 8)
-        imageBtn.AnchorPoint = Vector2.new(1, 0)
-        imageBtn.BackgroundColor3 = Color3.fromRGB(60, 63, 70)
-        imageBtn.BorderSizePixel = 0
-        imageBtn.Text = "+"
-        imageBtn.Font = Enum.Font.GothamBold
-        imageBtn.TextSize = 22
-        imageBtn.TextColor3 = Color3.fromRGB(150, 180, 255)
-        imageBtn.AutoButtonColor = false
-        imageBtn.Parent = bottom
-        Instance.new("UICorner", imageBtn).CornerRadius = UDim.new(0, 6)
-        AddBorder(imageBtn, Color3.fromRGB(0, 0, 0), Color3.fromRGB(60, 65, 75), 1, 1.2)
-        BindBorder(imageBtn, 1.2, 2, 2.6)
-        imageBtn.MouseButton1Click:Connect(function()
-            showImageUrlDialog()
-        end)
 
         local send=self:_o({"ImageButton",{
             AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-6,0,8),Size=UDim2.fromOffset(60,30),
@@ -2946,9 +2827,9 @@ end
         task.spawn(function()
             self:_presence()
             local alone=self:_cleanIfAlone()
-            pcall(function() self:_loadChat(true) end)   -- initial history load (walang popup)
-            task.wait(0.5)                               -- wait ng kaunti
-            self.PopupReady = true                       -- ✅ saka lang mag-a-allow ng popup
+            pcall(function() self:_loadChat(true) end)
+            task.wait(0.5)
+            self.PopupReady = true
             self:_notice(alone and "● Fresh" or "● Connected",Color3.fromRGB(87,242,135))
             local tick=0
             while self.Alive and self.Main and self.Main.Parent do
