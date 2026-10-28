@@ -1434,6 +1434,8 @@ gridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 local chapterData = {
+    
+    {Name = "X KEN CARSON",      ID = "84591466609973"},
     {Name = "THE HOLLOW",      ID = "86440331666426"},
     {Name = "NIGHTMARE CIRCUS",      ID = "79688186061506"},
     {Name = "RAGE 1",      ID = "127880323915555"},
