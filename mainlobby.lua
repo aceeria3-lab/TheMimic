@@ -1457,20 +1457,48 @@ end
 -- Header (Nasa pinaka-taas)
 createSectionHeader("Info", "REDEEM CODE", -3)
 
--- Redeem Box (Nasa gitna)
--- Siguraduhin na ang container.LayoutOrder = -2 sa loob ng createRedeemBox function
 createRedeemBox("Info", function(code)
     local rs = game:GetService("ReplicatedStorage")
     local codeEvent = rs:FindFirstChild("Codes@Mimic")
-    if codeEvent and codeEvent:IsA("RemoteEvent") then
-        local ok = pcall(function() codeEvent:FireServer(code) end)
-        if ok then
-            notify("IOHUB", "Redeeming: " .. code, 2)
-        else
-            notify("IOHUB", "Failed to fire redeem event", 2)
-        end
-    else
+    if not (codeEvent and codeEvent:IsA("RemoteEvent")) then
         notify("IOHUB", "Codes@Mimic remote not found!", 2)
+        return
+    end
+
+    local player = game:GetService("Players").LocalPlayer
+
+    local function getStatusLabel()
+        local pg     = player:FindFirstChild("PlayerGui")
+        local panel  = pg and pg:FindFirstChild("CodesPanel")
+        local holder = panel and panel:FindFirstChild("Holder")
+        local group  = holder and holder:FindFirstChild("Group")
+        local main   = group and group:FindFirstChild("Main")
+        local inner  = main and main:FindFirstChild("Main")
+        return inner and inner:FindFirstChild("Status")
+    end
+
+    local statusLabel = getStatusLabel()
+    local prevText = statusLabel and statusLabel.Text or ""
+
+    local ok = pcall(function() codeEvent:FireServer(code) end)
+    if not ok then
+        notify("IOHUB", "Failed to fire redeem event", 2)
+        return
+    end
+
+    notify("IOHUB", "Redeeming: " .. code, 2)
+
+    local start = os.clock()
+    while os.clock() - start < 3 do
+        task.wait(0.1)
+        statusLabel = getStatusLabel()
+        if statusLabel and statusLabel.Text ~= "" and statusLabel.Text ~= prevText then
+            break
+        end
+    end
+
+    if statusLabel and statusLabel.Text ~= "" then
+        notify("IOHUB", statusLabel.Text, 3)
     end
 end)
 
