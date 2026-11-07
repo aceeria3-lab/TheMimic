@@ -1,3 +1,5 @@
+-- V2
+
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -1764,6 +1766,9 @@ CreateHeaderDropdown("Section 4", "Sector E-7 Cave", "layout")(S4Tab)
 
 local S4LabTab = {}
 CreateHeaderDropdown("Section 4", "Sector E-7 Lab", "layout")(S4LabTab)
+
+local S5DSTab = {}
+CreateHeaderDropdown("Section 5", "Sector E-7 Downstairs", "layout")(S5DSTab)
 
 local S5StairsTab = {}
 CreateHeaderDropdown("Section 5", "Sector E-7 Basement", "layout")(S5StairsTab)
@@ -3809,7 +3814,106 @@ TestTab.createToggle("Auto Kill All Grunts", "Auto-fire Grunt RemoteEvents withi
     end)
 end)
 
+-- ====================================================================
+-- AUTO KILL FLESHBLOCK (Gamit ang S1Tab UI)
+-- ====================================================================
+S5DSTab.createToggle("Auto Shoot FleshBlock", "Auto-fire FleshBlock/Block sa buong Workspace", function(state)
+    _G.FleshBlockAutoActive = state
 
+    if not state then
+        notify("Info", "FleshBlock Auto-Fire: OFF", 2, "info")
+        return
+    end
+
+    local Players   = game:GetService("Players")
+    local Workspace = game:GetService("Workspace")
+    local player    = Players.LocalPlayer
+
+    notify("Success", "FleshBlock Auto-Fire: ON", 3, "success")
+
+    task.spawn(function()
+        while _G.FleshBlockAutoActive do
+            task.wait(0.1)
+            if not _G.FleshBlockAutoActive then break end
+
+            local char = player.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp then
+                -- Iscan ang Workspace para sa Block/FleshBlock
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not _G.FleshBlockAutoActive then break end
+                    
+                    if (obj.Name == "Block" or obj.Name == "FleshBlock") and obj:IsA("Model") then
+                        local body = obj:FindFirstChild("body")
+                        
+                        if body then
+                            local remote = body:FindFirstChildOfClass("RemoteEvent")
+                            
+                            if remote then
+                                pcall(function()
+                                    remote:FireServer()
+                                    remote:FireServer("Damage", 100)
+                                    remote:FireServer("Kill")
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+
+-- ====================================================================
+-- AUTO KILL MUKI / HOGOGUNTAI (Gamit ang S1Tab UI)
+-- ====================================================================
+S5DSTab.createToggle("Auto Shoot Muki", "Auto-fire HogoGuntai / Monster", function(state)
+    _G.MukiAutoActive = state
+
+    if not state then
+        notify("Info", "Muki Auto-Fire: OFF", 2, "info")
+        return
+    end
+
+    local Players   = game:GetService("Players")
+    local Workspace = game:GetService("Workspace")
+    local player    = Players.LocalPlayer
+
+    notify("Success", "Muki Auto-Fire: ON", 3, "success")
+
+    task.spawn(function()
+        while _G.MukiAutoActive do
+            task.wait(0.1)
+            if not _G.MukiAutoActive then break end
+
+            local char = player.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp then
+                -- Hanapin ang Monster folder sa Workspace (kahit saan)
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if not _G.MukiAutoActive then break end
+                    
+                    -- Kung HogoGuntai ang pangalan o nasa loob ng Monster folder
+                    if obj.Name == "HogoGuntai" or (obj.Name == "Monster" and obj:IsA("Folder")) then
+                        local remote = obj:FindFirstChildOfClass("RemoteEvent") 
+                            or obj:FindFirstChildWhichIsA("RemoteEvent", true)
+                        
+                        if remote then
+                            pcall(function()
+                                remote:FireServer()
+                                remote:FireServer("Damage", 100)
+                                remote:FireServer("Kill")
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end) 
 
 
 -- Ilipat sa Test UI tab para makita agad
