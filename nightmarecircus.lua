@@ -933,7 +933,7 @@ end, 7)
 
 
 -- AUTO EYE RELIC (Naka-Toggle, Eksaktong Logic mo)
-createneToggle("Section 2", "Auto Eye Relic (Nightmare Circus)", "Auto Scan & Solve Eye Puzzle", function(state)
+createneToggle("Section 2", "Auto Eye Relic (Nightmare Mode)", "Auto Scan & Solve Eye Puzzle", function(state)
     isEyeRelicRunning = state
     
     if state then
@@ -1077,7 +1077,7 @@ end, 8)
 
 
 -- AUTO EYE RELIC (The Hollow - Reverted Logic)
-createneToggle("Section 2", "Auto Eye Relic (The Hollow)", "Auto Scan & Solve Eye Puzzle", function(state)
+createneToggle("Section 2", "Auto Eye Relic (Normal Mode)", "Auto Scan & Solve Eye Puzzle", function(state)
     isEyeRelicRunning = state
     
     if state then
