@@ -61,7 +61,7 @@ if currentId == 128715637193371 then
 
 
 elseif currentId == 91058462594174 then 
-    boot("⚠️ [ANTI CHEAT] Rage Book 3 Chapter 1", "https://raw.githubusercontent.com/Moymoy21/IOHUB/refs/heads/main/b3c1.txt")
+    boot("[SA] Rage Book 3 Chapter 1", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/R1SA.lua")
 
 elseif currentId == 96354063422506 then 
     boot("Jelousy Book 2 Chapter 4", "https://raw.githubusercontent.com/Moymoy21/IOHUB/refs/heads/main/b2c4v2.txt")
