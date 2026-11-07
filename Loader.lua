@@ -84,7 +84,7 @@ elseif table.find(thewitchtrialsids, currentId) then
 
 
 elseif currentId == 11126398230 then 
-    boot("Nightmare Circus X The Hollow", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/nightmarecircus.lua")
+    boot("Nightmare Circus", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/nightmarecircus.lua")
     
 elseif currentId == 16750505007 then 
     boot("The Mimic X Ken Carson", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/xcarson.lua")
