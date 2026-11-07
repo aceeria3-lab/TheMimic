@@ -1311,7 +1311,7 @@ createneToggle("Section 3", "Auto Safe Spot", "Keep teleporting back to safe spo
 end, 2)
 
 -- 2. Sugod (Ragebait) Button
-createCustomButton("Section 3", "Sugod sa Boss", "Teleport 15 studs behind boss, hit (x1), then return to Safe Spot", function()
+createCustomButton("Section 3", "Attack Boss", "Teleport 15 studs behind boss, hit (x1), then return to Safe Spot", function()
     if isDashing then return end 
     
     local section3 = workspace:FindFirstChild("Section3")
