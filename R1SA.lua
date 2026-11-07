@@ -1,4 +1,4 @@
--- V2
+-- V3
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -2305,6 +2305,61 @@ S4LabTab.createToggle("ESP ShapeTerminals", "ESP Folder: Section4.Lab.CleanseRoo
 end) 
 
 
+-- ====================================================================
+-- AUTO KILL HOGO (S1Tab Version)
+-- ====================================================================
+S4LabTab.createToggle("Auto Shoot Hogo", "Auto-fire HogoGuntai GunHitboxes (Section 4)", function(state)
+    _G.HogoAutoActive = state
+
+    if not state then
+        notify("Info", "Hogo Auto-Fire: OFF", 2, "info")
+        return
+    end
+
+    local Players   = game:GetService("Players")
+    local Workspace = game:GetService("Workspace")
+    local player    = Players.LocalPlayer
+
+    notify("Success", "Hogo Auto-Fire: ON", 3, "success")
+
+    task.spawn(function()
+        while _G.HogoAutoActive do
+            task.wait(0.1)
+            if not _G.HogoAutoActive then break end
+
+            local char = player.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp then
+                local section4 = Workspace:FindFirstChild("Section4")
+                local monster = section4 and section4:FindFirstChild("Monster")
+                local hogo = monster and monster:FindFirstChild("HogoGuntai")
+                
+                if hogo then
+                    local gunHitboxes = hogo:FindFirstChild("GunHitboxes")
+                    if gunHitboxes then
+                        -- I-loop lahat ng parts (kasama ang [2], [3], [4], Hitbox)
+                        for _, hitbox in ipairs(gunHitboxes:GetChildren()) do
+                            if not _G.HogoAutoActive then break end
+                            
+                            local remote = hitbox:FindFirstChild("RemoteEvent")
+                            if remote and remote:IsA("RemoteEvent") then
+                                pcall(function()
+                                    remote:FireServer()
+                                    remote:FireServer("Damage", 100)
+                                    remote:FireServer("Kill")
+                                    remote:FireServer(true)
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+
 --[[
 
 -- 2. Locked Custom Button (Yung may lock icon)
@@ -3914,6 +3969,52 @@ S5DSTab.createToggle("Auto Shoot Muki", "Auto-fire HogoGuntai / Monster", functi
         end
     end)
 end) 
+
+
+-- ====================================================================
+-- AUTO DIARY COMPLETE (S1Tab Version)
+-- ====================================================================
+TestTab.createToggle("Auto Diary Complete", "Fires Diary Complete kapag bukas ang DiaryReader frame", function(state)
+    _G.AutoDiaryCompleteActive = state
+
+    if not state then
+        notify("Info", "Auto Diary Complete: OFF", 2, "info")
+        return
+    end
+
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local player = Players.LocalPlayer
+    
+    -- Hanapin ang Event
+    local Packet = ReplicatedStorage:FindFirstChild("modules") and ReplicatedStorage.modules:FindFirstChild("Packet")
+    local Reliable = Packet and Packet:FindFirstChild("Reliable")
+
+    if not Reliable then
+        notify("Error", "Hindi mahanap ang Reliable Event!", 3, "error")
+        return
+    end
+
+    notify("Success", "Auto Diary Complete: ON", 3, "success")
+
+    task.spawn(function()
+        while _G.AutoDiaryCompleteActive do
+            task.wait(0.2) -- Medyo dahan-dahan lang (5 times per second) para iwas lag
+            if not _G.AutoDiaryCompleteActive then break end
+
+            -- Check kung nakabukas (Visible) ang DiaryReader
+            local gui4 = player.PlayerGui:FindFirstChild("Gui4")
+            local diaryReader = gui4 and gui4:FindFirstChild("DiaryReader")
+
+            if diaryReader and diaryReader.Visible then
+                pcall(function()
+                    -- Gamit ang firesignal para sa OnClientEvent
+                    firesignal(Reliable.OnClientEvent, "Section2/DiaryComplete")
+                end)
+            end
+        end
+    end)
+end)
 
 
 -- Ilipat sa Test UI tab para makita agad
