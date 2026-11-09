@@ -56,7 +56,7 @@ local thewitchtrialsids = {
 -- PLACE ID DATABASE MATRIX
 -- =========================================================================
 if currentId == 128715637193371 then 
-    boot("Rage Book 3 Chapter 1", "https://raw.githubusercontent.com/Moymoy21/IOHUB/refs/heads/main/b3c1.txt")
+    boot("Rage Book 3 Chapter 1", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/RageV2.lua")
 
 
 
