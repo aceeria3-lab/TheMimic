@@ -1,4 +1,4 @@
--- V1
+-- V2
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -2162,18 +2162,18 @@ CreateHeaderDropdown("Section 5", "Sector E-7 Downstairs", "layout")(S5DSTab)
 local S5StairsTab = {}
 CreateHeaderDropdown("Section 5", "Sector E-7 Basement", "layout")(S5StairsTab)
 
--- Setup Pages/Content
-local SettingTab = {}
-CreateHeaderDropdown("Setting", "Settings", "wrench")(SettingTab)
+
+local GamePlayTab = {}
+CreateHeaderDropdown("Setting", "Game Play", "")(GamePlayTab)
+
+local GraphicsTab = {}
+CreateHeaderDropdown("Setting", "Graphics", "")(GraphicsTab)
 
 local GlobalChatTab = {}
 CreateHeaderDropdown("Global Chat", "Global Chat", "message-square")(GlobalChatTab)
 
 
 switchTab("Main")
-
-
-
 
 
 -- ====================================================================
@@ -2348,7 +2348,6 @@ YenTab.createToggle("Yen ESP", "Highlights scattered Yen items", function(state)
 end)
 
 
--- TOGGLE: YEN SHOW STUDS (Distance Tracker)
 YenTab.createToggle("Yen Show Studs", "Shows live distance (studs) for every Yen", function(state)
     _G.YenDistance_Active = state
     local container = getContainer(YenContainerName)
@@ -2363,7 +2362,8 @@ YenTab.createToggle("Yen Show Studs", "Shows live distance (studs) for every Yen
                 
                 if not _G.YenESP_Active then continue end 
 
-                local myChar = player.Character
+                -- [INAYOS] Ginawang Player imbes na player
+                local myChar = Player.Character or localPlayer.Character
                 local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
                 
                 if myRoot then
@@ -2394,11 +2394,6 @@ YenTab.createToggle("Yen Show Studs", "Shows live distance (studs) for every Yen
     end
 end)
 
--- ====================================================================
--- 5. AUTO COLLECT YEN (Candy Logic - HoldDuration 0 + Rescan)
--- ====================================================================
-local isCollectingYen = false
-
 YenTab.createCustomButton("Auto Collect Yen", "", function()
     if isCollectingYen then
         isCollectingYen = false
@@ -2412,7 +2407,9 @@ YenTab.createCustomButton("Auto Collect Yen", "", function()
     task.spawn(function()
         while isCollectingYen do
             local found = false
-            local char = player.Character
+            
+            -- [INAYOS] Ginawang Player (capital P) o localPlayer
+            local char = Player.Character or localPlayer.Character
             local rootPart = char and char:FindFirstChild("HumanoidRootPart")
             local yenFolder = Workspace:FindFirstChild("Yen")
 
@@ -2447,6 +2444,7 @@ YenTab.createCustomButton("Auto Collect Yen", "", function()
         end
     end)
 end)
+
 
 
 
@@ -5802,7 +5800,52 @@ S5StairsTab.createToggle("ESP Wireboxes", "Toggle Visual Highlights for Wireboxe
 end)
 
 
+ -- ====================================================================
+-- AUTO STAMINA BOOST (MainTab)
+-- ====================================================================
+local autoStaminaActive = false
 
+GamePlayTab.createToggle("Auto Stamina Boost", "Continuously boosts stamina while ON", function(state)
+    autoStaminaActive = state
+
+    if not state then
+        notify("Info", "Auto Stamina Boost: OFF", 2, "info")
+        return
+    end
+
+    notify("Success", "Auto Stamina Boost: ON", 2, "success")
+
+    task.spawn(function()
+        while autoStaminaActive do
+            local ok, err = pcall(function()
+                local RS = game:GetService("ReplicatedStorage")
+                local modules = RS:FindFirstChild("modules")
+                local packet = modules and modules:FindFirstChild("Packet")
+                local reliable = packet and packet:FindFirstChild("Reliable")
+
+                if reliable then
+                    -- Ginagamit natin ang firesignal base sa Cobalt code mo
+                    firesignal(reliable.OnClientEvent, "Section1/StaminaBoost")
+                    
+                    -- NOTE: Kung hindi gumagana ang firesignal sa live game, 
+                    -- palitan mo ito ng: reliable:FireServer("Section1/StaminaBoost")
+                else
+                    error("Reliable Event not found!")
+                end
+            end)
+
+            -- Kung may error (tulad ng nawala yung Reliable), i-off na agad
+            if not ok and autoStaminaActive then
+                notify("Error", "Stamina Error: " .. tostring(err), 3, "error")
+                autoStaminaActive = false
+                break
+            end
+
+            task.wait(1) -- Mag-bo-boost kada 1 segundo
+        end
+    end)
+end)
+ 
 
 
 
@@ -5822,7 +5865,7 @@ local originalLightingData = {
     Sky = {}
 }
 
-SettingTab.createToggle("DayTime/Morning", "Toggles full brightness / removes darkness and red atmosphere", function(state)
+GamePlayTab.createToggle("DayTime/Morning", "Toggles full brightness / removes darkness and red atmosphere", function(state)
     if state then
         originalLightingData.ClockTime = Lighting.ClockTime
         originalLightingData.Brightness = Lighting.Brightness
@@ -5903,7 +5946,7 @@ local RunService = game:GetService("RunService")
 local antilagConnection = nil
 local originalSettings = {}
 
-SettingTab.createToggle("Anti-Lag / Low Graphics", "Boosts FPS by disabling shadows, particles, and heavy textures", function(state)
+GraphicsTab.createToggle("Anti-Lag", "Boosts FPS by disabling shadows, particles, and heavy textures", function(state)
     if state then
         notify("Info", "Enabling FPS Boost...", 2, "info")
 
@@ -6030,11 +6073,19 @@ chatPage.Size = UDim2.new(1, 0, 1, 0)
     local TeleportService = game:GetService("TeleportService")
     local L = P.LocalPlayer
 
-    local GameName = "Unknown Game"
+    -- Gagamitin muna natin ang game.Name, tapos kukunin ang mas accurate na pangalan
+local GameName = game.Name
+if not GameName or GameName == "" or GameName == "Place" then
+    GameName = "Fetching..." -- Temporary name habang kinukuha
     task.spawn(function()
         local ok, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
-        if ok and info and info.Name then GameName = info.Name end
+        if ok and info and info.Name then 
+            GameName = info.Name 
+        else
+            GameName = "Unknown Game" -- Fallback kung mag-fail
+        end
     end)
+end
 
     local I = {
         info="rbxassetid://124560466474914", reply="rbxassetid://109788633497028",
@@ -6193,7 +6244,7 @@ local function showProfilePopup(data)
     pGrad.Parent = panel
     Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
 
-    -- Close Button (X)
+    -- Close Button (X) - Nasa pinakataas
     local closeX = Instance.new("TextButton")
     closeX.Size = UDim2.fromOffset(28, 28)
     closeX.Position = UDim2.new(1, -38, 0, 15)
@@ -6218,7 +6269,7 @@ local function showProfilePopup(data)
     -- =====================================================================
     local topRow = Instance.new("Frame")
     topRow.Size = UDim2.new(1, -40, 0, 64)
-    topRow.Position = UDim2.new(0, 20, 0, 30)
+    topRow.Position = UDim2.new(0, 20, 0, 40) -- Inadjust pababa ng konti
     topRow.BackgroundTransparency = 1
     topRow.ZIndex = 21
     topRow.Parent = panel
@@ -6246,12 +6297,12 @@ local function showProfilePopup(data)
         end)
     end
 
-    -- Join Button (Inayos ang style)
+    -- Join Button (Nilagyan ng Stroke at inayos ang posisyon)
     local joinBtn = Instance.new("TextButton")
     joinBtn.Size = UDim2.fromOffset(90, 34)
-    joinBtn.Position = UDim2.new(1, 0, 0.5, 0) -- Kanan
-    joinBtn.AnchorPoint = Vector2.new(1, 0.5)
-    joinBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35) -- Dark gray
+    joinBtn.Position = UDim2.new(1, 0, 1, 0) -- Nakaposisyon sa ilalim ng topRow para hindi umabot sa X
+    joinBtn.AnchorPoint = Vector2.new(1, 1)
+    joinBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     joinBtn.Text = "JOIN GAME"
     joinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     joinBtn.Font = Enum.Font.GothamBold
@@ -6262,6 +6313,7 @@ local function showProfilePopup(data)
     
     Instance.new("UICorner", joinBtn).CornerRadius = UDim.new(0, 6)
     
+    -- [BAGONG DAGDAG] Stroke para sa Join Button
     local jStroke = Instance.new("UIStroke")
     jStroke.Color = Color3.fromRGB(80, 80, 80)
     jStroke.Thickness = 1
@@ -6295,7 +6347,7 @@ local function showProfilePopup(data)
     -- =====================================================================
     local nameLbl = Instance.new("TextLabel")
     nameLbl.Size = UDim2.new(1, -40, 0, 24)
-    nameLbl.Position = UDim2.new(0, 20, 0, 105)
+    nameLbl.Position = UDim2.new(0, 20, 0, 115) -- Inadjust pababa
     nameLbl.BackgroundTransparency = 1
     nameLbl.Text = "@" .. tostring(data.name or "?")
     nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -6316,8 +6368,8 @@ local function showProfilePopup(data)
     -- INFO CARD (Compact)
     -- =====================================================================
     local infoCard = Instance.new("Frame")
-    infoCard.Size = UDim2.new(1, -40, 0, 65) -- Pinaliit ang height
-    infoCard.Position = UDim2.new(0, 20, 0, 140)
+    infoCard.Size = UDim2.new(1, -40, 0, 80) -- Dinagdagan ng konting height para sa gradient text
+    infoCard.Position = UDim2.new(0, 20, 0, 150)
     infoCard.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     infoCard.BorderSizePixel = 0
     infoCard.ZIndex = 21
@@ -6330,42 +6382,50 @@ local function showProfilePopup(data)
     icStroke.Parent = infoCard
 
     local icPad = Instance.new("UIPadding")
-    icPad.PaddingTop = UDim.new(0, 8)
-    icPad.PaddingBottom = UDim.new(0, 8)
+    icPad.PaddingTop = UDim.new(0, 10)
+    icPad.PaddingBottom = UDim.new(0, 10)
     icPad.PaddingLeft = UDim.new(0, 12)
     icPad.PaddingRight = UDim.new(0, 12)
     icPad.Parent = infoCard
     
     local icLayout = Instance.new("UIListLayout")
-    icLayout.Padding = UDim.new(0, 2)
+    icLayout.Padding = UDim.new(0, 4)
     icLayout.SortOrder = Enum.SortOrder.LayoutOrder
     icLayout.Parent = infoCard
 
     local function infoRow(labelText, valueText, order)
         local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1, 0, 0, 10)
+        lbl.Size = UDim2.new(1, 0, 0, 12)
         lbl.BackgroundTransparency = 1
         lbl.Text = labelText
         lbl.TextColor3 = Color3.fromRGB(140, 145, 155)
         lbl.Font = Enum.Font.GothamBold
-        lbl.TextSize = 9
+        lbl.TextSize = 10
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.LayoutOrder = order
         lbl.ZIndex = 22
         lbl.Parent = infoCard
 
         local val = Instance.new("TextLabel")
-        val.Size = UDim2.new(1, 0, 0, 14)
+        val.Size = UDim2.new(1, 0, 0, 16)
         val.BackgroundTransparency = 1
         val.Text = tostring(valueText or "N/A")
-        val.TextColor3 = Color3.fromRGB(230, 232, 235)
-        val.Font = Enum.Font.Gotham
-        val.TextSize = 11
+        val.TextColor3 = Color3.fromRGB(255, 255, 255) -- Base white
+        val.Font = Enum.Font.GothamMedium
+        val.TextSize = 12
         val.TextXAlignment = Enum.TextXAlignment.Left
         val.TextTruncate = Enum.TextTruncate.AtEnd
         val.LayoutOrder = order + 1
         val.ZIndex = 22
         val.Parent = infoCard
+        
+        -- [BAGONG DAGDAG] Gradient sa Values ng Info para maging colorful
+        local vGrad = Instance.new("UIGradient")
+        vGrad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 255, 150)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 200, 255))
+        }
+        vGrad.Parent = val
     end
 
     infoRow("GAME NAME", tostring(data.gameName or "Unknown Game"), 1)
@@ -7011,7 +7071,7 @@ local stroke=Instance.new("UIStroke")
 stroke.Color=mine and Color3.fromRGB(88,101,242) or Color3.fromRGB(60,60,60)
 stroke.Thickness=1
 stroke.Transparency=mine and 0.6 or 0.7
-stroke.Parent=rowp
+stroke.Parent=row
         
         -- ✅ PINALIT: Pinaliit ang padding sa 4 (dating 6)
         self:_o({"UIPadding",{
@@ -7270,17 +7330,26 @@ stroke.Parent=rowp
     end
 
     function S:_presence()
-        pcall(function()
-            Http({
-                Url=self:_base().."/presence/"..Url(tostring(L.UserId))..".json",
-                Method="PUT", Headers={["Content-Type"]="application/json"},
-                Body=Enc({
-                    t=os.time(), n=L.Name, d=L.DisplayName,
-                    g=GameName, pid=game.PlaceId, jid=game.JobId,
-                }),
-            })
-        end)
+    -- [BAGONG DAGDAG] Hintayin makuha muna yung tamang pangalan ng laro bago mag-send
+    if GameName == "Fetching..." then
+        local timeout = 0
+        repeat 
+            task.wait(0.2) 
+            timeout = timeout + 1
+        until GameName ~= "Fetching..." or timeout > 25 or not self.Alive -- Max 5 seconds na hintay
     end
+
+    pcall(function()
+        Http({
+            Url=self:_base().."/presence/"..Url(tostring(L.UserId))..".json",
+            Method="PUT", Headers={["Content-Type"]="application/json"},
+            Body=Enc({
+                t=os.time(), n=L.Name, d=L.DisplayName,
+                g=GameName, pid=game.PlaceId, jid=game.JobId,
+            }),
+        })
+    end)
+end
 
     function S:_cleanIfAlone()
         local body=select(1,Http({Url=self:_base().."/presence.json",Method="GET",Headers={["Content-Type"]="application/json"}}))
