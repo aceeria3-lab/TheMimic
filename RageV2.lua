@@ -1,4 +1,4 @@
--- V2
+-- V3
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -2394,33 +2394,45 @@ YenTab.createToggle("Yen Show Studs", "Shows live distance (studs) for every Yen
     end
 end)
 
+
+
+
+
+
+_G.IsCollectingYen = false 
+
+
 YenTab.createCustomButton("Auto Collect Yen", "", function()
-    if isCollectingYen then
-        isCollectingYen = false
-        notify("IOHUB", "Auto Collect Yen: STOPPED", 2)
+
+    if _G.IsCollectingYen then
+        _G.IsCollectingYen = false
+        notify("IOHUB", "Auto Collect Yen: STOPPED", 2, "info")
         return
     end
     
-    isCollectingYen = true
-    notify("IOHUB", "Auto Collect Yen: STARTED", 2)
+
+    _G.IsCollectingYen = true
+    notify("IOHUB", "Auto Collect Yen: STARTED", 2, "success")
 
     task.spawn(function()
-        while isCollectingYen do
+        local emptyScans = 0 -- Counter para malaman kung wala nang Yen
+
+        while _G.IsCollectingYen do
             local found = false
             
-            -- [INAYOS] Ginawang Player (capital P) o localPlayer
             local char = Player.Character or localPlayer.Character
             local rootPart = char and char:FindFirstChild("HumanoidRootPart")
             local yenFolder = Workspace:FindFirstChild("Yen")
 
             if rootPart and yenFolder then
                 for _, child in ipairs(yenFolder:GetChildren()) do
-                    if not isCollectingYen then break end
+                    if not _G.IsCollectingYen then break end
                     
                     local prompt = child:FindFirstChildWhichIsA("ProximityPrompt", true)
                     
                     if prompt and prompt.Enabled then
                         found = true
+                        emptyScans = 0 -- May nahanap, i-reset ang counter
                         
                         local basePart = child:IsA("BasePart") and child or child:FindFirstChildWhichIsA("BasePart")
                         
@@ -2438,14 +2450,22 @@ YenTab.createCustomButton("Auto Collect Yen", "", function()
                 end
             end
             
+            -- [BAGONG LOGIC] KUSANG MAG-STOP KAPAG WALA NANG YEN
             if not found then
-                task.wait(1)
+                emptyScans = emptyScans + 1
+                
+                -- Kung 3 beses na walang nahanap (mga 3 seconds), tuluyan nang i-stop
+                if emptyScans >= 2 then
+                    _G.IsCollectingYen = false -- Isara ang loop
+                    notify("IOHUB", "Auto Collect: Stopped (No Yen Found)", 2, "warning")
+                    break -- Lumabas sa loop nang tuluyan
+                else
+                    task.wait(1) -- Maghintay muna ng 1 segundo bago mag-scan ulit
+                end
             end
         end
     end)
 end)
-
-
 
 
 
