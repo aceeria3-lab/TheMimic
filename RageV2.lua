@@ -1,4 +1,4 @@
--- V3
+-- V5
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -4789,9 +4789,12 @@ S4Tab.createOneRectangle({
                 if ok and t then codeText = t end
             end
 
+
+
+
             -- I-display kung may laman
             if codeText and codeText ~= "" then
-                return "" .. tostring(codeText), Color3.fromRGB(255, 255, 255) -- Puti para kitang-kita
+                return "" .. tostring(codeText), Color3.fromRGB(100, 220, 150) -- Green
             else
                 return "Waiting for code...", Color3.fromRGB(255, 200, 80) -- Dilaw
             end
@@ -6093,18 +6096,34 @@ chatPage.Size = UDim2.new(1, 0, 1, 0)
     local TeleportService = game:GetService("TeleportService")
     local L = P.LocalPlayer
 
-    -- Gagamitin muna natin ang game.Name, tapos kukunin ang mas accurate na pangalan
+-- [FIXED] Direct API Fetch para makuha ang tamang pangalan (The Mimic, etc.)
 local GameName = game.Name
-if not GameName or GameName == "" or GameName == "Place" then
-    GameName = "Fetching..." -- Temporary name habang kinukuha
-    task.spawn(function()
-        local ok, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
-        if ok and info and info.Name then 
-            GameName = info.Name 
+
+if not GameName or GameName == "" or GameName == "Place" or GameName == "Ugc" or GameName == "Game" then
+    local gameId = tostring(game.GameId)
+    local url = "https://games.roblox.com/v1/games?universeIds=" .. gameId
+    
+    local success, response = pcall(function()
+        if type(request) == "function" then
+            return request({Url = url, Method = "GET"}).Body
+        elseif type(syn) == "table" and type(syn.request) == "function" then
+            return syn.request({Url = url, Method = "GET"}).Body
         else
-            GameName = "Unknown Game" -- Fallback kung mag-fail
+            return game:HttpGet(url)
         end
     end)
+    
+    if success and response then
+        local decodeSuccess, data = pcall(function() return H:JSONDecode(response) end)
+        if decodeSuccess and data and data.data and data.data[1] and data.data[1].name then
+            GameName = data.data[1].name
+        end
+    end
+    
+    -- Ultimate fallback kung talagang hindi kaya ng executor mag-HTTP request
+    if GameName == "Ugc" or GameName == "Game" or GameName == "Place" or GameName == "" then
+        GameName = "Unknown Game"
+    end
 end
 
     local I = {
@@ -7610,87 +7629,102 @@ self:_o({"TextLabel",{
         }},replyBar)
         rX.MouseButton1Click:Connect(function() self:SetReply(nil) end)
 
-        local bottom=self:_o({"Frame",{
-    AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,48),
-    BackgroundColor3=Color3.fromRGB(255,255,255),BorderSizePixel=0
-}},main)
+    -- =====================================================================
+    -- BOTTOM BAR (Input & Send Button)
+    -- =====================================================================
+    local bottom=self:_o({"Frame",{
+        AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,54), -- Pinalaki height
+        BackgroundColor3=Color3.fromRGB(255,255,255),BorderSizePixel=0
+    }},main)
 
-local botGrad = Instance.new("UIGradient")
-botGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 15))
-})
-botGrad.Rotation = 90
-botGrad.Parent = bottom
+    local botGrad = Instance.new("UIGradient")
+    botGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 15))
+    })
+    botGrad.Rotation = 90
+    botGrad.Parent = bottom
 
-local input=self:_o({"TextBox",{
-            Position=UDim2.fromOffset(6,8),Size=UDim2.new(1,-72,0,30),
-            BackgroundColor3=Color3.fromRGB(40, 40, 40), -- Mas madilim na input
-            BorderSizePixel=0,ClearTextOnFocus=false,MultiLine=false,Text="",PlaceholderText="Message or Image ID...",
-            PlaceholderColor3=Color3.fromRGB(160, 160, 160), -- MAS MALIWANAG PARA MABASA
-            TextColor3=Color3.fromRGB(230,232,235),
-            Font=Enum.Font.Gotham,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Center
-        }},bottom)
-        
-        
-self.Input=input
-self:_o({"UICorner",{CornerRadius=UDim.new(0,6)}},input)
-self:_o({"UIPadding",{PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,6)}},input)
+    -- 1. GLASS INPUT BOX (Pill Shape)
+    local input=self:_o({"TextBox",{
+        Position=UDim2.fromOffset(10, 10), -- Margins
+        Size=UDim2.new(1, -60, 0, 34), -- Height 34
+        BackgroundColor3=Color3.fromRGB(40, 40, 40), 
+        BackgroundTransparency=0.4, -- Glass effect (translucent)
+        BorderSizePixel=0,
+        ClearTextOnFocus=false,
+        MultiLine=false,
+        Text="",
+        PlaceholderText="Message or Image ID...",
+        PlaceholderColor3=Color3.fromRGB(150, 150, 150), 
+        TextColor3=Color3.fromRGB(230,232,235),
+        Font=Enum.Font.Gotham,
+        TextSize=13,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        TextYAlignment=Enum.TextYAlignment.Center
+    }},bottom)
+    
+    self.Input=input
+    -- [BAGONG DAGDAG] Bilog na dulo (Pill shape)
+    self:_o({"UICorner",{CornerRadius=UDim.new(1, 0)}},input)
+    self:_o({"UIPadding",{PaddingLeft=UDim.new(0,14),PaddingRight=UDim.new(0,14)}},input)
 
-local inGrad = Instance.new("UIGradient")
-inGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 40)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 28, 28))
-})
-inGrad.Rotation = 90
-inGrad.Parent = input
+    -- [BAGONG DAGDAG] Faint Glass Stroke
+    local inStroke = Instance.new("UIStroke")
+    inStroke.Color = Color3.fromRGB(255, 255, 255)
+    inStroke.Thickness = 1
+    inStroke.Transparency = 0.85 -- Napaka-faint
+    inStroke.Parent = input
 
-AddBorder(input,Color3.fromRGB(0,0,0),Color3.fromRGB(60,65,75),1,1.2)
+    -- 2. SEND BUTTON (Icon Only)
+    local send=self:_o({"ImageButton",{
+        AnchorPoint=Vector2.new(1,0.5), 
+        Position=UDim2.new(1,-10,0.5,0), -- Naka-center vertically sa kanan
+        Size=UDim2.fromOffset(38, 38),
+        BackgroundTransparency=1, -- WALANG BACKGROUND
+        BorderSizePixel=0,
+        Image=I.send,
+        ImageColor3=Color3.fromRGB(100, 150, 255), -- Asul na icon
+        ScaleType=Enum.ScaleType.Fit,
+        AutoButtonColor=false
+    }},bottom)
+    
+    self.SendBtn=send
+    
+    -- Hover effect
+    send.MouseEnter:Connect(function()
+        TweenService:Create(send, TweenInfo.new(0.15), {ImageColor3 = Color3.fromRGB(150, 180, 255)}):Play()
+    end)
+    send.MouseLeave:Connect(function()
+        TweenService:Create(send, TweenInfo.new(0.15), {ImageColor3 = Color3.fromRGB(100, 150, 255)}):Play()
+    end)
+    
+    send.MouseButton1Click:Connect(function() self:Send() end)
+    input.FocusLost:Connect(function(e) if e then self:Send() end end)
+    input.MouseEnter:Connect(function() self:_bottom() end)
 
-        local send=self:_o({"ImageButton",{
-            AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-6,0,8),Size=UDim2.fromOffset(60,30),
-            BackgroundColor3=Color3.fromRGB(70, 130, 255), -- Asul na Send Button
-            BorderSizePixel=0,Image=I.send,ImageColor3=Color3.new(1,1,1),
-            ScaleType=Enum.ScaleType.Fit,AutoButtonColor=false
-        }},bottom)
-        self.SendBtn=send
-        self:_o({"UICorner",{CornerRadius=UDim.new(0,6)}},send)
-
-local sendGrad = Instance.new("UIGradient")
-sendGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(88, 101, 242)), -- Blue
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 75, 200))
-})
-sendGrad.Rotation = 90
-sendGrad.Parent = send
-
-
-        AddBorder(send,Color3.fromRGB(0,0,0),Color3.fromRGB(120,140,255),1,1.4)
-        BindBorder(send,1.4,2.2,2.8)
-        send.MouseButton1Click:Connect(function() self:Send() end)
-        input.FocusLost:Connect(function(e) if e then self:Send() end end)
-        input.MouseEnter:Connect(function() self:_bottom() end)
-
-        task.spawn(function()
-            self:_presence()
-            local alone=self:_cleanIfAlone()
-            pcall(function() self:_loadChat(true) end)
-            task.wait(0.5)
-            self.PopupReady = true
-            self:_notice(alone and "● Fresh" or "● Connected",Color3.fromRGB(87,242,135))
-            local tick=0
-            while self.Alive and self.Main and self.Main.Parent do
-                tick=tick+1
-                if tick%3==0 then
-                    self:_presence()
-                    self:_cleanIfAlone()
-                end
-                pcall(function() self:_loadChat(false) end)
-                task.wait(C.Poll)
+    task.spawn(function()
+        self:_presence()
+        local alone=self:_cleanIfAlone()
+        pcall(function() self:_loadChat(true) end)
+        task.wait(0.5)
+        self.PopupReady = true
+        self:_notice(alone and "● Fresh" or "● Connected",Color3.fromRGB(87,242,135))
+        local tick=0
+        while self.Alive and self.Main and self.Main.Parent do
+            tick=tick+1
+            if tick%3==0 then
+                self:_presence()
+                self:_cleanIfAlone()
             end
-        end)
-        return self
-    end
+            pcall(function() self:_loadChat(false) end)
+            task.wait(C.Poll)
+        end
+    end)
+    return self
+end
+
+        
 
     TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage, placeId, teleportOptions)
         if player == L then
