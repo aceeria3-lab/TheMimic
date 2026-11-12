@@ -6097,34 +6097,14 @@ chatPage.Size = UDim2.new(1, 0, 1, 0)
     local L = P.LocalPlayer
 
 -- [FIXED] Direct API Fetch para makuha ang tamang pangalan (The Mimic, etc.)
-local GameName = game.Name
+-- Direktang kukunin ang totoong pangalan ng laro gamit ang MarketplaceService
+local MarketplaceService = game:GetService("MarketplaceService")
+local success, info = pcall(function()
+    return MarketplaceService:GetProductInfo(game.PlaceId, Enum.InfoType.Asset)
+end)
 
-if not GameName or GameName == "" or GameName == "Place" or GameName == "Ugc" or GameName == "Game" then
-    local gameId = tostring(game.GameId)
-    local url = "https://games.roblox.com/v1/games?universeIds=" .. gameId
-    
-    local success, response = pcall(function()
-        if type(request) == "function" then
-            return request({Url = url, Method = "GET"}).Body
-        elseif type(syn) == "table" and type(syn.request) == "function" then
-            return syn.request({Url = url, Method = "GET"}).Body
-        else
-            return game:HttpGet(url)
-        end
-    end)
-    
-    if success and response then
-        local decodeSuccess, data = pcall(function() return H:JSONDecode(response) end)
-        if decodeSuccess and data and data.data and data.data[1] and data.data[1].name then
-            GameName = data.data[1].name
-        end
-    end
-    
-    -- Ultimate fallback kung talagang hindi kaya ng executor mag-HTTP request
-    if GameName == "Ugc" or GameName == "Game" or GameName == "Place" or GameName == "" then
-        GameName = "Unknown Game"
-    end
-end
+-- Kung nag-success, kunin ang .Name, kung hindi, "Unknown Game" (pero walang ibang checks)
+local GameName = success and info.Name or "Unknown Game"
 
     local I = {
         info="rbxassetid://124560466474914", reply="rbxassetid://109788633497028",
