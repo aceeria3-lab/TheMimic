@@ -4763,7 +4763,7 @@ end)
 
 
 S4Tab.createOneRectangle({
-    Icon = "rbxassetid://127032800584061", -- Palitan mo ng tamang Image ID kung meron ka
+    Icon = "rbxassetid://104988684970777", -- Palitan mo ng tamang Image ID kung meron ka
     Title = "CODE (Make Sure Open the Gate)",
     GetValue = function()
         -- Hanapin yung RandomNumber label sa sticky note
