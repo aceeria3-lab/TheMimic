@@ -3456,7 +3456,7 @@ end
 
 -- AUTO-LOAD VIA GITHUB HTTPGET
 task.spawn(function()
-    local githubUrl = "https://raw.githubusercontent.com/Moymoy21/Main-Iyongofficial/refs/heads/main/IOHUB_PureMacro.lua"
+    local githubUrl = "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/IOHUB_PureMacroV2.lua"
     
     local success, rawData = pcall(function()
         return game:HttpGet(githubUrl)
