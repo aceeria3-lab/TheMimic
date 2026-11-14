@@ -74,7 +74,7 @@ elseif currentId == 96354063422506 then
     
 -- Kapag ang na-detect ay alinman sa Control Place IDs
 elseif table.find(controlIds, currentId) then
-    boot("Control Book All Chapters", "https://raw.githubusercontent.com/Moymoy21/IOHUB/refs/heads/main/control.txt")
+    boot("Control Book All Chapters", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/ControlAllChapter.lua")
     
     elseif table.find(halloweenIds, currentId) then
     boot("Halloween Trials", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/HalloweenTrials.lua")
