@@ -51,6 +51,18 @@ local thewitchtrialsids = {
 7068740106,
 }
 
+local themimicclassids = {
+
+15996404472,
+15996407335,
+15996410294,
+15996411979,
+15996413469,
+15996414738,
+15996416081,
+15996417416,
+}
+
 
 -- =========================================================================
 -- PLACE ID DATABASE MATRIX
@@ -72,16 +84,20 @@ elseif currentId == 96354063422506 then
     elseif currentId == 13489800654 then 
     boot("Jelousy Book 2 Chapter 2", "https://raw.githubusercontent.com/Moymoy21/IOHUB/refs/heads/main/b2c2.txt")
     
--- Kapag ang na-detect ay alinman sa Control Place IDs
+elseif currentId == 15989427413 then 
+    boot("The Mimic Classic Lobby", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/TheMimicClassicLobby.lua")
+
 elseif table.find(controlIds, currentId) then
     boot("Control Book All Chapters", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/ControlAllChapter.lua")
+    
+    elseif table.find(themimicclassids, currentId) then
+    boot("The Mimic Classic All Chapters", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/ClassicMimic.lua")
     
     elseif table.find(halloweenIds, currentId) then
     boot("Halloween Trials", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/HalloweenTrials.lua")
 
 elseif table.find(thewitchtrialsids, currentId) then
     boot("The Witch Trials", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/TheWitchTrials.lua")
-
 
 elseif currentId == 11126398230 then 
     boot("Nightmare Circus", "https://raw.githubusercontent.com/aceeria3-lab/TheMimic/refs/heads/main/nightmarecircus.lua")
